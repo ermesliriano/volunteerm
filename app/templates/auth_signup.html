@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Signup · Volunteerm{% endblock %}
+
+{% block content %}
+  <div class="auth-layout">
+    <section class="card">
+      <h1 class="h1">Crear cuenta</h1>
+
+      <form method="post" class="form">
+        {{ form.hidden_tag() }}
+
+        <label class="label">Email</label>
+        {{ form.email(class_="input", placeholder="tu@email.com") }}
+        {% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+        <label class="label">Contraseña</label>
+        {{ form.password(class_="input", placeholder="Mínimo 8 caracteres") }}
+        {% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+        <label class="label">Repite la contraseña</label>
+        {{ form.password2(class_="input", placeholder="********") }}
+        {% for e in form.password2.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+        <button class="btn primary" type="submit">Crear cuenta</button>
+      </form>
+
+      <p class="muted">
+        ¿Ya tienes cuenta?
+        <a href="{{ url_for('auth.login') }}">Inicia sesión</a>
+      </p>
+    </section>
+  </div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Volunteerm{% endblock %}
+
+{% block content %}
+  <section class="card">
+    <h1 class="h1">Dashboard</h1>
+    <p class="muted">Has iniciado sesión como <strong>{{ current_user.email }}</strong>.</p>
+  </section>
+{% endblock %}

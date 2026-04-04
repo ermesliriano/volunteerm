@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: volunteerm
+    runtime: python
+    plan: free
+
+    buildCommand: pip install -r requirements.txt
+
+    # Render recomienda usar el PORT env var; enlazamos a 0.0.0.0:$PORT
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4
+
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+
+      # Flask/CSRF/sesión requieren SECRET_KEY robusta
+      - key: SECRET_KEY
+        generateValue: true
+
+      # No es secreto, pero conviene gestionarlo como env var
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      # SQLite por defecto (ojo: en Free el FS es efímero y se perderán datos)
+      # Puedes omitir DATABASE_URL para usar el default en instance_path.
+      - key: DATABASE_URL
+        value: sqlite:////tmp/volunteerm.sqlite3
+
+    # OPCIONAL (solo planes de pago): disco persistente para SQLite
+    # disk:
+    #   name: data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    #
+    # Si activas disk, cambia DATABASE_URL a:
+    # - key: DATABASE_URL
+    #   value: sqlite:////var/data/volunteerm.sqlite3

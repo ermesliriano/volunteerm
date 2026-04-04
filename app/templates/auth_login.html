@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Login · Volunteerm{% endblock %}
+
+{% block head %}
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+{% endblock %}
+
+{% block content %}
+  <div class="auth-layout">
+    <section class="card">
+      <h1 class="h1">Iniciar sesión</h1>
+
+      <form method="post" class="form">
+        {{ form.hidden_tag() }}
+
+        <label class="label">Email</label>
+        {{ form.email(class_="input", placeholder="tu@email.com") }}
+        {% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+        <label class="label">Contraseña</label>
+        {{ form.password(class_="input", placeholder="********") }}
+        {% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+        <label class="checkbox">
+          {{ form.remember() }}
+          <span>Recordarme</span>
+        </label>
+
+        <button class="btn primary" type="submit">Entrar</button>
+      </form>
+
+      <div class="divider"><span>o</span></div>
+
+      <div id="google-btn" class="google-btn"></div>
+      <div id="google-error" class="field-error" style="display:none;"></div>
+
+      <p class="muted">
+        ¿No tienes cuenta?
+        <a href="{{ url_for('auth.signup') }}">Crear cuenta</a>
+      </p>
+    </section>
+  </div>
+{% endblock %}
