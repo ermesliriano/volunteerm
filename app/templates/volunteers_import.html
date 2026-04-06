@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Importar CSV · Volunteerm{% endblock %}
+
+{% block content %}
+  <section class="card">
+    <div class="row">
+      <h1 class="h1">Importar voluntarios por CSV</h1>
+      <a class="btn" href="{{ url_for('volunteers.sample_csv') }}">Descargar CSV de ejemplo</a>
+    </div>
+
+    <p class="muted">
+      Cabecera requerida (en este orden o equivalente): <code>{{ expected_headers|join(",") }}</code>
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="form">
+      {{ form.hidden_tag() }}
+      <label class="label">Fichero CSV</label>
+      {{ form.file(class_="input") }}
+      {% for e in form.file.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+      <button class="btn primary" type="submit">Importar</button>
+      <a class="btn" href="{{ url_for('volunteers.list_volunteers') }}">Cancelar</a>
+    </form>
+  </section>
+{% endblock %}

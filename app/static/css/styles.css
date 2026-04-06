@@ -114,3 +114,52 @@ body {
 .flash-message { border-color: rgba(90,169,255,0.45); }
 
 .google-btn { display: grid; justify-content: start; }
+
+
+/* --- Volunteers additions --- */
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.row-actions { display: flex; gap: 10px; align-items: center; }
+
+.pill {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.table-wrap { overflow-x: auto; margin-top: 14px; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th, .table td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 8px;
+  text-align: left;
+}
+.table th { color: var(--muted); font-weight: 600; }
+.table td.actions { white-space: nowrap; }
+
+.btn.small { padding: 6px 10px; border-radius: 10px; font-size: 13px; }
+.btn.danger { border-color: rgba(255,123,123,0.45); background: rgba(255,123,123,0.12); }
+
+.search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.stat { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.stat-label { color: var(--muted); font-size: 13px; }
+.stat-value { font-size: 26px; font-weight: 700; margin: 4px 0 10px; }
+.detail .block { margin-top: 10px; }

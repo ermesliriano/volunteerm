@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "new" %}Nuevo voluntario{% else %}Editar voluntario{% endif %} · Volunteerm{% endblock %}
+
+{% block content %}
+  <section class="card">
+    <h1 class="h1">{% if mode == "new" %}Nuevo voluntario{% else %}Editar voluntario{% endif %}</h1>
+
+    <form method="post" class="form">
+      {{ form.hidden_tag() }}
+
+      <label class="label">Nombre completo</label>
+      {{ form.full_name(class_="input") }}
+      {% for e in form.full_name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+      <label class="label">Email</label>
+      {{ form.email(class_="input") }}
+      {% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+
+      <label class="label">Teléfono</label>
+      {{ form.phone(class_="input") }}
+
+      <label class="label">Ciudad</label>
+      {{ form.city(class_="input") }}
+
+      <label class="label">Disponibilidad</label>
+      {{ form.availability(class_="input") }}
+
+      <label class="label">Notas</label>
+      {{ form.notes(class_="input", rows="4") }}
+
+      <button class="btn primary" type="submit">Guardar</button>
+      <a class="btn" href="{{ url_for('volunteers.list_volunteers') }}">Cancelar</a>
+    </form>
+  </section>
+{% endblock %}

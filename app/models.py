@@ -1,36 +1,68 @@
-from datetime import datetime
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
+import os
+from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .extensions import db
+from .config import Config
+from .extensions import db, login_manager, csrf
+from .models import User
 
-class User(db.Model, UserMixin):
-    __tablename__ = "users"
+def create_app(test_config=None):
+    app = Flask(__name__, instance_relative_config=True)
 
-    id = db.Column(db.Integer, primary_key=True)
+    # Base config
+    app.config.from_mapping(
+        SECRET_KEY=Config.SECRET_KEY,
+    )
 
-    email = db.Column(db.String(255), unique=True, index=True, nullable=False)
+    if test_config is not None:
+        app.config.from_mapping(test_config)
+    else:
+        os.makedirs(app.instance_path, exist_ok=True)
 
-    # Email/password auth
-    password_hash = db.Column(db.String(255), nullable=True)
+        app.config.from_object(Config)
+        Config.init_app_config(app)
 
-    # Google auth: stable identifier is 'sub'
-    google_sub = db.Column(db.String(255), unique=True, index=True, nullable=True)
+        # Default SQLite si no hay DATABASE_URL (local)
+        if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+            sqlite_path = os.path.join(app.instance_path, "volunteerm.sqlite3")
+            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{sqlite_path}"
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    last_login_at = db.Column(db.DateTime, nullable=True)
+    # Reverse proxy headers (Render)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
-    def set_password(self, password: str) -> None:
-        self.password_hash = generate_password_hash(password)
+    # Extensions
+    db.init_app(app)
+    csrf.init_app(app)
 
-    def check_password(self, password: str) -> bool:
-        if not self.password_hash:
-            return False
-        return check_password_hash(self.password_hash, password)
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
 
-    @property
-    def has_local_password(self) -> bool:
-        return bool(self.password_hash)
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        try:
+            uid = int(user_id)
+        except ValueError:
+            return None
+        return User.query.get(uid)
 
-    def __repr__(self) -> str:
-        return f"<User id={self.id} email={self.email}>"
+    @app.context_processor
+    def inject_globals():
+        return {
+            "google_client_id": app.config.get("GOOGLE_CLIENT_ID", ""),
+            "environment": app.config.get("ENVIRONMENT", "development"),
+        }
+
+    # Blueprints
+    from .auth.routes import auth_bp
+    from .main.routes import main_bp
+    from .volunteers.routes import volunteers_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(volunteers_bp)
+
+    # Create tables (MVP)
+    with app.app_context():
+        db.create_all()
+
+    return app

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Voluntario · Volunteerm{% endblock %}
+
+{% block content %}
+  <section class="card">
+    <div class="row">
+      <h1 class="h1">{{ volunteer.full_name }}</h1>
+      {% if current_user.can_write %}
+        <a class="btn" href="{{ url_for('volunteers.volunteer_edit', volunteer_id=volunteer.id) }}">Editar</a>
+      {% endif %}
+    </div>
+
+    <div class="detail">
+      <div><span class="muted">Email:</span> {{ volunteer.email or "-" }}</div>
+      <div><span class="muted">Teléfono:</span> {{ volunteer.phone or "-" }}</div>
+      <div><span class="muted">Ciudad:</span> {{ volunteer.city or "-" }}</div>
+      <div><span class="muted">Disponibilidad:</span> {{ volunteer.availability or "-" }}</div>
+      <div class="block"><span class="muted">Notas:</span><br/>{{ volunteer.notes or "-" }}</div>
+    </div>
+
+    <p class="muted"><a href="{{ url_for('volunteers.list_volunteers') }}">← volver</a></p>
+  </section>
+{% endblock %}

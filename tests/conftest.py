@@ -10,6 +10,7 @@ def app():
         "WTF_CSRF_ENABLED": False,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "GOOGLE_CLIENT_ID": "test-client-id",
+        "ADMIN_EMAILS": {"admin@example.com"},
     })
 
     with app.app_context():

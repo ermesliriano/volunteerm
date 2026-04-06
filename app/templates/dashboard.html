@@ -5,5 +5,21 @@
   <section class="card">
     <h1 class="h1">Dashboard</h1>
     <p class="muted">Has iniciado sesión como <strong>{{ current_user.email }}</strong>.</p>
+
+    <div class="grid">
+      <div class="stat">
+        <div class="stat-label">Voluntarios</div>
+        <div class="stat-value">{{ volunteers_count }}</div>
+        <a class="btn" href="{{ url_for('volunteers.list_volunteers') }}">Ver voluntarios</a>
+      </div>
+
+      {% if current_user.can_write %}
+      <div class="stat">
+        <div class="stat-label">Acciones</div>
+        <div class="stat-value">CRUD</div>
+        <a class="btn primary" href="{{ url_for('volunteers.volunteer_new') }}">Crear voluntario</a>
+      </div>
+      {% endif %}
+    </div>
   </section>
 {% endblock %}

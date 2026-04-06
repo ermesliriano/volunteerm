@@ -7,7 +7,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from .forms import LoginForm, SignupForm
 from .google import verify_google_id_token
 from ..extensions import db
-from ..models import User
+from ..models import User, UserRole
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -23,6 +23,13 @@ def _redirect_after_login():
     if nxt and _is_safe_url(nxt):
         return redirect(nxt)
     return redirect(url_for("main.dashboard"))
+
+def _apply_admin_role_bootstrap(user: User) -> None:
+    admins = current_app.config.get("ADMIN_EMAILS", set())
+    if user.email and user.email.lower() in admins:
+        user.role = UserRole.ADMIN
+    elif not user.role:
+        user.role = UserRole.READER
 
 @auth_bp.get("/login")
 @auth_bp.post("/login")
@@ -40,6 +47,7 @@ def login():
             return render_template("auth_login.html", form=form)
 
         user.last_login_at = datetime.utcnow()
+        _apply_admin_role_bootstrap(user)
         db.session.commit()
 
         login_user(user, remember=bool(form.remember.data))
@@ -66,6 +74,8 @@ def signup():
         user.set_password(form.password.data)
         user.created_at = datetime.utcnow()
 
+        _apply_admin_role_bootstrap(user)
+
         db.session.add(user)
         db.session.commit()
 
@@ -76,10 +86,6 @@ def signup():
 
 @auth_bp.post("/google")
 def google_login():
-    """
-    Recibe JSON: { credential: "<JWT>" }.
-    La protección CSRF se aplica globalmente; el frontend debe enviar X-CSRFToken.
-    """
     if current_user.is_authenticated:
         return jsonify({"ok": True, "redirect": url_for("main.dashboard")})
 
@@ -103,15 +109,13 @@ def google_login():
         return jsonify({"ok": False, "error": "ID token sin sub."}), 400
     if not email:
         return jsonify({"ok": False, "error": "ID token sin email."}), 400
+    if not email_verified:
+        return jsonify({"ok": False, "error": "Email Google no verificado."}), 403
 
-    # 1) si existe por google_sub, úsalo
     user = User.query.filter_by(google_sub=google_sub).first()
-
-    # 2) si no existe, intenta por email para "linking" básico
     if not user:
         user_by_email = User.query.filter_by(email=email).first()
         if user_by_email:
-            # Linking simple: si ya está linkeado a otro sub, error
             if user_by_email.google_sub and user_by_email.google_sub != google_sub:
                 return jsonify({"ok": False, "error": "Email ya vinculado a otra cuenta Google."}), 409
             user_by_email.google_sub = google_sub
@@ -119,11 +123,9 @@ def google_login():
         else:
             user = User(email=email, google_sub=google_sub)
 
-    # (Opcional MVP) Rechazar si email no verificado
-    if not email_verified:
-        return jsonify({"ok": False, "error": "Email Google no verificado."}), 403
-
     user.last_login_at = datetime.utcnow()
+    _apply_admin_role_bootstrap(user)
+
     db.session.add(user)
     db.session.commit()
 
