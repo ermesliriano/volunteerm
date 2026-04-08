@@ -28,8 +28,9 @@ def _apply_admin_role_bootstrap(user: User) -> None:
     admins = current_app.config.get("ADMIN_EMAILS", set())
     if user.email and user.email.lower() in admins:
         user.role = UserRole.ADMIN
-    elif not user.role:
-        user.role = UserRole.READER
+    else:
+        # Si no está en admins, garantizar reader
+        user.role = user.role or UserRole.READER
 
 @auth_bp.get("/login")
 @auth_bp.post("/login")
@@ -86,6 +87,8 @@ def signup():
 
 @auth_bp.post("/google")
 def google_login():
+    # CSRF para AJAX: se envía con header X-CSRFToken (Flask-WTF)
+    # (ver auth.js)
     if current_user.is_authenticated:
         return jsonify({"ok": True, "redirect": url_for("main.dashboard")})
 

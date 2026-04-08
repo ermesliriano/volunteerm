@@ -20,7 +20,7 @@
             <a href="{{ url_for('volunteers.list_volunteers') }}">Voluntarios</a>
 
             <span class="pill">
-              {% if current_user.is_admin %}Admin{% else %}Reader{% endif %}
+              {% if current_user.is_admin %}Admin{% else %}Solo lectura{% endif %}
             </span>
 
             <form class="inline" method="post" action="{{ url_for('auth.logout') }}">

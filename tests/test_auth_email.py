@@ -1,4 +1,4 @@
-def test_signup_and_login(client):
+def test_signup_and_login_email(client):
     # signup
     resp = client.post("/auth/signup", data={
         "email": "user@example.com",

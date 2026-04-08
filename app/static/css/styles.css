@@ -56,7 +56,7 @@ body {
 }
 
 .card {
-  width: min(420px, 100%);
+  width: min(900px, 100%);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -115,8 +115,7 @@ body {
 
 .google-btn { display: grid; justify-content: start; }
 
-
-/* --- Volunteers additions --- */
+/* Volunteers UI */
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .row-actions { display: flex; gap: 10px; align-items: center; }
 

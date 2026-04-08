@@ -2,44 +2,33 @@ import os
 from datetime import timedelta
 
 class Config:
-    ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-not-secure")
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-not-secure").strip()
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 
-    # Render Internal Database URL (postgresql://...)
-    DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+    DATABASE_URL = os.getenv("DATABASE_URL", "").strip().strip('"').strip("'")
 
-    # CSV de emails con permisos CRUD: "a@x.com,b@y.com"
-    _admin_emails_raw = os.getenv("ADMIN_EMAILS", "")
-    ADMIN_EMAILS = {e.strip().lower() for e in _admin_emails_raw.split(",") if e.strip()}
+    # ADMIN_EMAILS puede venir con comillas desde .env en Windows, lo limpiamos
+    _admin_raw = os.getenv("ADMIN_EMAILS", "").strip().strip('"').strip("'")
+    ADMIN_EMAILS = {e.strip().lower() for e in _admin_raw.split(",") if e.strip()}
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Manejo de desconexiones y "stale connections"
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 1800,
     }
 
-    # Cookies sesión
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
-    # Uploads: CSV import
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2MB
-
-    # CSRF: tokens (incluye soporte header X-CSRFToken)
     WTF_CSRF_TIME_LIMIT = 60 * 60 * 2  # 2h
 
     @staticmethod
     def normalize_database_url(url: str) -> str:
-        """
-        Normaliza los esquemas para SQLAlchemy y fuerza driver explícito.
-        - postgres://  -> postgresql://
-        - postgresql:// -> postgresql+psycopg://
-        """
         if not url:
             return ""
 
@@ -48,7 +37,12 @@ class Config:
         if url.startswith("postgres://"):
             url = "postgresql://" + url[len("postgres://"):]
 
-        # Si es postgresql:// sin driver explícito, forzamos psycopg (v3)
+        # Si ya trae driver explícito, no tocar
+        if url.startswith("postgresql+"):
+            return url
+
+        # SQLAlchemy 2.1 usa psycopg por defecto para postgresql://,
+        # pero lo dejamos explícito para evitar ambigüedades.
         if url.startswith("postgresql://"):
             url = "postgresql+psycopg://" + url[len("postgresql://"):]
 

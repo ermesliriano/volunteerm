@@ -1,15 +1,17 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for, Response
-from flask_login import login_required, current_user
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import Volunteer
+from ..utils.csv_utils import EXPECTED_HEADERS, parse_volunteers_csv
 from ..utils.permissions import require_crud
-from ..utils.csv_utils import parse_volunteers_csv, EXPECTED_HEADERS
 from .forms import VolunteerForm, VolunteersCSVImportForm
 
 volunteers_bp = Blueprint("volunteers", __name__, url_prefix="/volunteers")
 
-@volunteers_bp.get("")
+@volunteers_bp.get("/")
 @login_required
 def list_volunteers():
     q = (request.args.get("q") or "").strip()
@@ -18,7 +20,7 @@ def list_volunteers():
     if q:
         like = f"%{q}%"
         query = query.filter(
-            db.or_(
+            or_(
                 Volunteer.full_name.ilike(like),
                 Volunteer.email.ilike(like),
                 Volunteer.city.ilike(like),
@@ -41,9 +43,17 @@ def volunteer_detail(volunteer_id: int):
 def volunteer_new():
     form = VolunteerForm()
     if form.validate_on_submit():
+        email = (form.email.data or "").strip().lower() or None
+
+        if email:
+            existing = Volunteer.query.filter_by(email=email).first()
+            if existing:
+                flash("Ya existe un voluntario con ese email.", "error")
+                return render_template("volunteer_form.html", form=form, mode="new")
+
         v = Volunteer(
             full_name=form.full_name.data.strip(),
-            email=(form.email.data or "").strip().lower() or None,
+            email=email,
             phone=(form.phone.data or "").strip() or None,
             city=(form.city.data or "").strip() or None,
             availability=(form.availability.data or "").strip() or None,
@@ -51,7 +61,13 @@ def volunteer_new():
             created_by_id=current_user.id,
         )
         db.session.add(v)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("No se pudo guardar (posible duplicado de email).", "error")
+            return render_template("volunteer_form.html", form=form, mode="new")
+
         flash("Voluntario creado.", "message")
         return redirect(url_for("volunteers.list_volunteers"))
     return render_template("volunteer_form.html", form=form, mode="new")
@@ -65,13 +81,28 @@ def volunteer_edit(volunteer_id: int):
     form = VolunteerForm(obj=v)
 
     if form.validate_on_submit():
+        email = (form.email.data or "").strip().lower() or None
+
+        if email:
+            other = Volunteer.query.filter(Volunteer.email == email, Volunteer.id != v.id).first()
+            if other:
+                flash("Ese email ya está asignado a otro voluntario.", "error")
+                return render_template("volunteer_form.html", form=form, mode="edit", volunteer=v)
+
         v.full_name = form.full_name.data.strip()
-        v.email = (form.email.data or "").strip().lower() or None
+        v.email = email
         v.phone = (form.phone.data or "").strip() or None
         v.city = (form.city.data or "").strip() or None
         v.availability = (form.availability.data or "").strip() or None
         v.notes = (form.notes.data or "").strip() or None
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("No se pudo actualizar (posible duplicado de email).", "error")
+            return render_template("volunteer_form.html", form=form, mode="edit", volunteer=v)
+
         flash("Voluntario actualizado.", "message")
         return redirect(url_for("volunteers.volunteer_detail", volunteer_id=v.id))
 
@@ -101,23 +132,16 @@ def import_csv():
         if errors:
             for err in errors[:10]:
                 flash(err, "error")
-            return render_template(
-                "volunteers_import.html",
-                form=form,
-                expected_headers=EXPECTED_HEADERS,
-            )
+            return render_template("volunteers_import.html", form=form, expected_headers=EXPECTED_HEADERS)
 
         created = 0
         updated = 0
-        skipped = 0
 
         for rec in rows:
             email = rec["email"].strip().lower()
             email = email if email else None
 
-            existing = None
-            if email:
-                existing = Volunteer.query.filter_by(email=email).first()
+            existing = Volunteer.query.filter_by(email=email).first() if email else None
 
             if existing:
                 existing.full_name = rec["full_name"]
@@ -139,8 +163,14 @@ def import_csv():
                 db.session.add(v)
                 created += 1
 
-        db.session.commit()
-        flash(f"Importación completada: {created} creados, {updated} actualizados, {skipped} omitidos.", "message")
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Error al importar: revisa emails duplicados.", "error")
+            return render_template("volunteers_import.html", form=form, expected_headers=EXPECTED_HEADERS)
+
+        flash(f"Importación completada: {created} creados, {updated} actualizados.", "message")
         return redirect(url_for("volunteers.list_volunteers"))
 
     return render_template("volunteers_import.html", form=form, expected_headers=EXPECTED_HEADERS)
@@ -148,9 +178,8 @@ def import_csv():
 @volunteers_bp.get("/sample.csv")
 @login_required
 def sample_csv():
-    # Muestra cabecera esperada + ejemplo
     content = ",".join(EXPECTED_HEADERS) + "\n" + \
-              "Ada Lovelace,[email protected],+34 600 000 000,Madrid,Fines de semana,Interés en apoyo logístico\n"
+              "Ada Lovelace,ada@example.com,+34 600 000 000,Madrid,Fines de semana,Interés en apoyo logístico\n"
     return Response(
         content,
         mimetype="text/csv",

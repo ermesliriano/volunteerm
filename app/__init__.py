@@ -3,33 +3,29 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
-from .extensions import db, login_manager, csrf
-from .models import User
+from .extensions import csrf, db, login_manager
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
 
-    # Base config
+    # Defaults
     app.config.from_mapping(
         SECRET_KEY=Config.SECRET_KEY,
     )
 
-    if test_config is not None:
+    if test_config:
         app.config.from_mapping(test_config)
     else:
-        # Ensure instance folder exists (SQLite default file often lives there)
         os.makedirs(app.instance_path, exist_ok=True)
-
-        # Apply config class defaults
         app.config.from_object(Config)
         Config.init_app_config(app)
 
-        # If no SQLALCHEMY_DATABASE_URI set, default to SQLite in instance_path
+        # Fallback SQLite si no hay DATABASE_URL
         if not app.config.get("SQLALCHEMY_DATABASE_URI"):
             sqlite_path = os.path.join(app.instance_path, "volunteerm.sqlite3")
             app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{sqlite_path}"
 
-    # Reverse proxy headers (Render)
+    # Proxy headers (Render)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     # Extensions
@@ -41,13 +37,14 @@ def create_app(test_config=None):
 
     @login_manager.user_loader
     def load_user(user_id: str):
+        # Import lazy para evitar ciclos
+        from .models import User
         try:
             uid = int(user_id)
         except ValueError:
             return None
         return User.query.get(uid)
 
-    # Context for templates (Google Client ID)
     @app.context_processor
     def inject_globals():
         return {
@@ -58,11 +55,15 @@ def create_app(test_config=None):
     # Blueprints
     from .auth.routes import auth_bp
     from .main.routes import main_bp
+    from .volunteers.routes import volunteers_bp
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(volunteers_bp)
 
-    # Create tables (MVP). For real migrations, use Alembic/Flask-Migrate.
+    # Create tables (MVP): asegúrate de que los modelos están importados
     with app.app_context():
+        from .models import User, Volunteer  # noqa: F401
         db.create_all()
 
     return app

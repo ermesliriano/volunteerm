@@ -17,10 +17,8 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
 
-      # Ya la defines en Render como Internal Database URL string
       - key: DATABASE_URL
         sync: false
 
-      # Coma-separado: "tuemail@dominio.com,otro@dominio.com"
       - key: ADMIN_EMAILS
         sync: false

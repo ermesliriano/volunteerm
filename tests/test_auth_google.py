@@ -1,6 +1,6 @@
 import app.auth.google as google_mod
 
-def test_google_login_creates_session(monkeypatch, client):
+def test_google_login(monkeypatch, client):
     def fake_verify(token, client_id):
         return {
             "sub": "google-sub-123",
